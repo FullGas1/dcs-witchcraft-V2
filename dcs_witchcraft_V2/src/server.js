@@ -10,28 +10,29 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-// MAPPING DES DOSSIERS (Strictement conforme à votre capture d'écran)
-// Le point d'entrée est le dossier frontend
+// FOLDER MAPPING (Strictly matching your directory structure)
+// The primary entry point is the frontend folder
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Déclaration des dossiers de ressources à la racine
+// Define resource folders at the root level
 app.use('/bower_components', express.static(path.join(__dirname, 'bower_components')));
 app.use('/common', express.static(path.join(__dirname, 'common')));
 app.use('/vendor_js', express.static(path.join(__dirname, 'vendor_js')));
-// backend/ est conservé physiquement mais n'est pas exposé au Web par sécurité
+// backend/ folder is kept physically but not exposed to the Web for security reasons
 
 io.on('connection', (socket) => {
-    console.log('[Witchcraft] Connexion établie.');
+    console.log('[Witchcraft] Connection established.');
 
     socket.on('lua', (data) => {
         const env = data.env || 'mission';
+        // Select port based on environment (3001 for export, 3002 for mission)
         const dcsPort = (env === 'export') ? 3001 : 3002;
 
         const dcsClient = new net.Socket();
         
         dcsClient.connect(dcsPort, '127.0.0.1', () => {
-            //dcsClient.write(JSON.stringify(data) + '\n');
-			dcsClient.write(JSON.stringify(data) + '\r\n');
+            // Using \r\n to ensure DCS Witchcraft Lua listener correctly parses the JSON end-of-line
+            dcsClient.write(JSON.stringify(data) + '\r\n');
         });
 
         dcsClient.on('data', (tcpData) => {
@@ -39,7 +40,7 @@ io.on('connection', (socket) => {
                 const response = JSON.parse(tcpData.toString());
                 socket.emit('luaresult', response);
             } catch (e) {
-                // Erreur de parsing
+                // Parsing error - handle malformed JSON from DCS if necessary
             }
             dcsClient.destroy();
         });
@@ -56,5 +57,5 @@ io.on('connection', (socket) => {
 
 const PORT = 3000;
 server.listen(PORT, () => {
-    console.log(`\x1b[32m[READY]\x1b[0m Serveur V2 (Modernisé) : http://localhost:${PORT}`);
+    console.log(`\x1b[32m[READY]\x1b[0m V2 Server (Modernized): http://localhost:${PORT}`);
 });
