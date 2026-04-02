@@ -1,3 +1,8 @@
+/**
+ * DCS-Witchcraft Server (Modernized v4)
+ * Handles communication between Web Console/VS Code and DCS World
+ */
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -6,32 +11,34 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
+
+// Initialize Socket.io with CORS for modern browser/client security
 const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
-// FOLDER MAPPING (Strictly matching your directory structure)
-// The primary entry point is the frontend folder
+// FOLDER MAPPING
 app.use(express.static(path.join(__dirname, 'frontend')));
-
-// Define resource folders at the root level
 app.use('/bower_components', express.static(path.join(__dirname, 'bower_components')));
 app.use('/common', express.static(path.join(__dirname, 'common')));
 app.use('/vendor_js', express.static(path.join(__dirname, 'vendor_js')));
-// backend/ folder is kept physically but not exposed to the Web for security reasons
 
 io.on('connection', (socket) => {
-    console.log('[Witchcraft] Connection established.');
+    console.log('[Witchcraft] Client connected.');
 
     socket.on('lua', (data) => {
         const env = data.env || 'mission';
-        // Select port based on environment (3002 for export, 3001 for mission)
+        // Logic: 'mission' maps to 3001 (MissionScripting.lua default)
+        // 'export' maps to 3002
         const dcsPort = (env === 'export') ? 3002 : 3001;
 
         const dcsClient = new net.Socket();
         
         dcsClient.connect(dcsPort, '127.0.0.1', () => {
-            // Using \r\n to ensure DCS Witchcraft Lua listener correctly parses the JSON end-of-line
+            // Append \r\n to ensure DCS TCP listener triggers processing
             dcsClient.write(JSON.stringify(data) + '\r\n');
         });
 
@@ -40,7 +47,7 @@ io.on('connection', (socket) => {
                 const response = JSON.parse(tcpData.toString());
                 socket.emit('luaresult', response);
             } catch (e) {
-                // Parsing error - handle malformed JSON from DCS if necessary
+                // Silently catch malformed chunks
             }
             dcsClient.destroy();
         });
@@ -48,14 +55,19 @@ io.on('connection', (socket) => {
         dcsClient.on('error', (err) => {
             socket.emit('luaresult', { 
                 success: false, 
-                result: "DCS Connection Error on port " + dcsPort 
+                result: "Connection refused by DCS on port " + dcsPort 
             });
             dcsClient.destroy();
         });
+    });
+
+    socket.on('disconnect', () => {
+        console.log('[Witchcraft] Client disconnected.');
     });
 });
 
 const PORT = 3000;
 server.listen(PORT, () => {
-    console.log(`\x1b[32m[READY]\x1b[0m V2 Server (Modernized): http://localhost:${PORT}`);
+    console.log(`\x1b[32m[READY]\x1b[0m Server running at http://127.0.0.1:${PORT}`);
+    console.log(`\x1b[36m[INFO]\x1b[0m Target DCS Port: 3001 (Mission Environment)`);
 });

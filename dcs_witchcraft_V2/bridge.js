@@ -1,63 +1,65 @@
 /**
- * DCS-Witchcraft Bridge for VS Code
- * Logiciel de liaison entre VS Code et DCS World via Socket.io
+ * DCS-Witchcraft Bridge for VS Code (English Version)
+ * Forwards Lua scripts from VS Code to the Node.js Server
  */
 
 const io = require('socket.io-client');
 const fs = require('fs');
 
-const W_URL = "http://127.0.0.1:3000";
+const SERVER_URL = "http://127.0.0.1:3000";
 const filePath = process.argv[2];
 
-const socket = io(W_URL, { 
+// Initialize client (Socket.io v4 compatible)
+const socket = io(SERVER_URL, { 
     transports: ['websocket'],
-    upgrade: false 
+    reconnection: false 
 });
 
 socket.on('connect_error', (err) => {
-    console.error(`\x1b[31m[ERR]\x1b[0m Connexion impossible au serveur : ${err.message}`);
-    process.exit(1);
-});
-
-socket.on('connect_timeout', () => {
-    console.error("\x1b[31m[ERR]\x1b[0m Délai de connexion dépassé.");
+    console.log(`\x1b[31m[ERROR]\x1b[0m Connection failed: ${err.message}`);
     process.exit(1);
 });
 
 socket.on('connect', () => {
+    console.log("\x1b[36m[INFO]\x1b[0m Connected to Witchcraft Server.");
+
     try {
+        if (!filePath) throw new Error("No file path provided.");
+
         const luaCode = fs.readFileSync(filePath, 'utf8');
-        
-        // Génération d'un ID identique à celui vu dans votre console
-        const msgName = Date.now().toString(); 
+        const msgId = Date.now().toString(); 
 
         const payload = {
-            env: "mission",
+            env: "mission", // Targets port 3001 in server.js
             code: luaCode,
-            name: msgName, // L'ID que nous avons vu dans votre log
-            type: "lua"    // Précisé explicitement
+            name: msgId,
+            type: "lua"
         };
 
-        console.log(`\x1b[34m[SEND]\x1b[0m ID: ${msgName}`);
+        console.log(`\x1b[34m[SEND]\x1b[0m Injecting script ID: ${msgId}`);
         socket.emit('lua', payload);
 
-        // On attend la réponse spécifique 'luaresult' avant de quitter
+        // Fail-safe timeout
         const timeout = setTimeout(() => {
-            console.log("\x1b[31m[TIMEOUT]\x1b[0m Pas de réponse de DCS.");
+            console.log("\x1b[31m[TIMEOUT]\x1b[0m No response from DCS (Check port 3001).");
             process.exit(1);
         }, 5000);
 
         socket.on('luaresult', (data) => {
-            if (data.name === msgName) {
+            // Check if response matches our request ID
+            if (!data.name || data.name === msgId) {
                 clearTimeout(timeout);
-                console.log("\x1b[32m[SUCCESS]\x1b[0m DCS a acquitté l'exécution.");
-                console.dir(data);
+                console.log("\x1b[32m[SUCCESS]\x1b[0m DCS acknowledged execution.");
+                
+                if (data.result) {
+                    console.log(`\x1b[37m[RETURN]\x1b[0m ${data.result}`);
+                }
                 process.exit(0);
             }
         });
 
     } catch (err) {
-        console.error(err.message);
+        console.error(`\x1b[31m[ERROR]\x1b[0m ${err.message}`);
         process.exit(1);
     }
 });
