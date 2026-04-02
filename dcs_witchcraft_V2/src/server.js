@@ -25,8 +25,8 @@ io.on('connection', (socket) => {
 
     socket.on('lua', (data) => {
         const env = data.env || 'mission';
-        // Select port based on environment (3001 for export, 3002 for mission)
-        const dcsPort = (env === 'export') ? 3001 : 3002;
+        // Select port based on environment (3002 for export, 3001 for mission)
+        const dcsPort = (env === 'export') ? 3002 : 3001;
 
         const dcsClient = new net.Socket();
         

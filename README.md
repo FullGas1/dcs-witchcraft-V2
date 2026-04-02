@@ -109,8 +109,9 @@ dofile(lfs.writedir().."Scripts\\Witchcraft.lua")
 
 ### B. Script Installation
 1.  Place the original `Witchcraft.lua` in `%USERPROFILE%\Saved Games\DCS\Scripts\`.
-2.  In `Export.lua` (same folder), add the following line:
-    `dofile(lfs.writedir()..[[Scripts\Witchcraft.lua]])`
+2.  Place the original `WitchcraftExport.lua` in `%USERPROFILE%\Saved Games\DCS\Scripts\`.
+or `dofile(lfs.writedir()..[[Scripts\Witchcraft.lua]])` in Export.lua
+or `dofile(lfs.writedir()..[[Scripts\WitchcraftExport.lua]])` in Export.lua
 
 ---
 
