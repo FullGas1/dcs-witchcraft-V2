@@ -1,25 +1,29 @@
 @echo off
 TITLE DCS Witchcraft V2 Server
 
-:: 1. On force le passage sur le disque E:
-E:
+:: 1. Detect script directory (the \windows folder)
+:: %~dp0 includes the trailing backslash
+set "SCRIPT_DIR=%~dp0"
 
-:: 2. On se déplace précisément dans le dossier src
-cd "\DCS\Edition_Missions_Outils\WitchCraft\dcs_witchcraft_V2\src"
+:: 2. Move to the \src folder relative to the script location
+:: /d allows changing drive and directory simultaneously
+cd /d "%SCRIPT_DIR%..\src"
 
-echo --- CONFIGURATION V2 ---
-echo Dossier de travail : %CD%
-echo -----------------------
+echo --- WITCHCRAFT V2 CONFIGURATION (PORTABLE) ---
+echo Working Directory: %CD%
+echo ----------------------------------------------
 
-:: 3. On vérifie la présence du fichier avant de lancer
+:: 3. Verification and Execution
 if exist server.js (
-    echo [OK] Lancement de Node...
+    echo [OK] Starting Node.js Engine...
     node server.js
 ) else (
-    echo [ERREUR] server.js est introuvable dans %CD%
-    echo Verifiez le chemin dans le fichier .cmd
+    echo [ERROR] server.js not found in:
+    echo %CD%
+    echo.
+    echo Please ensure the "src" folder exists alongside the "windows" folder.
     pause
 )
 
-:: Garder la fenêtre ouverte en cas d'arrêt du serveur
+:: Keep window open if the server stops or crashes
 pause
