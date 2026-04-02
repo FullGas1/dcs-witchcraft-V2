@@ -145,7 +145,7 @@ end
 1.  **Cleanup:** Run `kill_server.cmd` (Optional, only if ports are locked).
 2.  **Server:** Run `witchcraft.cmd`. Keep this window open.
 3.  **DCS:** Start your mission. The server console must display `[Witchcraft] Connection established`.
-4.  **Edit:** Modify your Lua file in VS Code and press **Shift + Ctrl + B**.
+4.  **Edit:** Modify your Lua file in VS Code stay on lua file you want to execute and press **Shift + Ctrl + B**.
 5.  **Confirm:** The VS Code terminal will display `[SUCCESS] DCS acknowledged execution`.
 
 ---
