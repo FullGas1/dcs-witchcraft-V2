@@ -1,5 +1,5 @@
 /**
- * DCS-Witchcraft Bridge for VS Code (English Version)
+ * DCS-Witchcraft Bridge for VS Code (v4 Compatible)
  * Forwards Lua scripts from VS Code to the Node.js Server
  */
 
@@ -9,7 +9,7 @@ const fs = require('fs');
 const SERVER_URL = "http://127.0.0.1:3000";
 const filePath = process.argv[2];
 
-// Initialize client (Socket.io v4 compatible)
+// Initialize client with websocket transport
 const socket = io(SERVER_URL, { 
     transports: ['websocket'],
     reconnection: false 
@@ -30,7 +30,7 @@ socket.on('connect', () => {
         const msgId = Date.now().toString(); 
 
         const payload = {
-            env: "mission", // Targets port 3001 in server.js
+            env: "mission", // Matches port 3001 in server.js
             code: luaCode,
             name: msgId,
             type: "lua"
@@ -46,7 +46,6 @@ socket.on('connect', () => {
         }, 5000);
 
         socket.on('luaresult', (data) => {
-            // Check if response matches our request ID
             if (!data.name || data.name === msgId) {
                 clearTimeout(timeout);
                 console.log("\x1b[32m[SUCCESS]\x1b[0m DCS acknowledged execution.");

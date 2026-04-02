@@ -12,7 +12,7 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io with CORS for modern browser/client security
+// Initialize Socket.io with CORS for modern security standards
 const io = new Server(server, {
     cors: {
         origin: "*",
@@ -31,14 +31,13 @@ io.on('connection', (socket) => {
 
     socket.on('lua', (data) => {
         const env = data.env || 'mission';
-        // Logic: 'mission' maps to 3001 (MissionScripting.lua default)
-        // 'export' maps to 3002
+        // 'mission' environment targets port 3001 (MissionScripting.lua default)
         const dcsPort = (env === 'export') ? 3002 : 3001;
 
         const dcsClient = new net.Socket();
         
         dcsClient.connect(dcsPort, '127.0.0.1', () => {
-            // Append \r\n to ensure DCS TCP listener triggers processing
+            // Append \r\n to ensure DCS TCP listener processes the JSON correctly
             dcsClient.write(JSON.stringify(data) + '\r\n');
         });
 
@@ -47,7 +46,7 @@ io.on('connection', (socket) => {
                 const response = JSON.parse(tcpData.toString());
                 socket.emit('luaresult', response);
             } catch (e) {
-                // Silently catch malformed chunks
+                // Ignore malformed JSON chunks
             }
             dcsClient.destroy();
         });
@@ -69,5 +68,4 @@ io.on('connection', (socket) => {
 const PORT = 3000;
 server.listen(PORT, () => {
     console.log(`\x1b[32m[READY]\x1b[0m Server running at http://127.0.0.1:${PORT}`);
-    console.log(`\x1b[36m[INFO]\x1b[0m Target DCS Port: 3001 (Mission Environment)`);
 });
