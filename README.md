@@ -1,46 +1,151 @@
-dcs-witchcraft
-==============
+# 📑 COMPLETE PROTOCOL: DCS WITCHCRAFT V2 INSTALLATION (FROM SCRATCH)
 
-"DCS Witchcraft" is:
-* a node.js server application
-* a Lua script that runs in the DCS: World mission scripting environment and talks to the node.js server via a TCP connection
-* some web applications, including a debug console that allows you to execute Lua snippets inside the running mission and look at the return values
+This document is the master technical reference for rebuilding the bridge between **VS Code**, a **Node.js v24 Server**, and **DCS World**.
 
-Here's what works so far:
-* Lua debug console for interactive development and debugging of mission scripts
-* Mission Editor to adjust the positions of existing units (mirrored to the running mission so you can watch the final position in the 3D environment)
+See https://github.com/jboecker/dcs-witchcraft/tree/master/src/backend for the initial version.
+Many thanks to jboecker for this tool which continues to be very useful.
+---
 
-[Watch the video walkthrough](http://www.dailymotion.com/video/x21d3ac_dcs-witchcraft-tutorial_videogames) to learn more.
+## 1. DIRECTORY STRUCTURE
 
-## Initial Setup
-* Copy `witchcraft.lua` to `%USERPROFILE%\Saved Games\DCS\Scripts\` (e.g. `C:\Users\<Your Username>\Saved Games\DCS\Scripts\`).
-* Go to your DCS: World installation directory (most likely `C:\Program Files\Eagle Dynamics\DCS World`), open the `Scripts` subfolder and edit the file `MissionScripting.lua`.
-Add the following code somewhere before the function `sanitizeModule` is defined:
-````lua
+Manually create the following structure on your **E:** drive (or adapt the drive letter).
+
+```text
+E:\DCS\Edition_Missions_Tools\WitchCraft\dcs_witchcraft_V2\
+├── windows\
+│   ├── witchcraft.cmd       <-- Server Launcher
+│   └── kill_server.cmd      <-- Cleanup Utility
+└── src\
+    ├── server.js            <-- Node.js Engine (Port 3000)
+    ├── package.json         <-- Node Configuration
+    ├── frontend\            <-- Web UI (index.html, console.html)
+    ├── common\              <-- witchcraft.js (Logic)
+    └── vendor_js\           <-- socket.io.js (v4.x)
+```
+
+---
+
+## 2. SERVER HUB CONFIGURATION (NODE.JS)
+
+### A. Node.js Initialization
+1.  Open a terminal in `E:\...\dcs_witchcraft_V2\src`.
+2.  Run: `npm init -y` followed by `npm install express socket.io`.
+
+### B. The Server Launcher (`windows/witchcraft.cmd`)
+Create this file to automate the bridge startup:
+```batch
+@echo off
+TITLE DCS Witchcraft V2 Server
+E:
+cd /d "\DCS\Edition_Missions_Outils\WitchCraft\dcs_witchcraft_V2\src"
+echo --- WITCHCRAFT V2 STARTING ---
+node server.js
+pause
+```
+
+### C. The Cleanup Utility (`windows/kill_server.cmd`)
+Use this if you encounter "Port 3000 already in use" errors:
+```batch
+@echo off
+taskkill /f /im node.exe
+echo [OK] Port 3000 released.
+timeout /t 2
+```
+
+---
+
+## 3. TRANSMITTER CONFIGURATION (VS CODE)
+
+### A. Tools Directory
+**Path:** `C:\Users\%USERNAME%\.vscode-dcs-tools\`
+1.  Create the folder if it does not exist.
+2.  Place your `bridge.js` file inside.
+3.  **CRITICAL:** Open a terminal **inside this folder** and run:
+    `npm install socket.io-client@latest`
+
+### B. VS Code Task (`.vscode/tasks.json`)
+In your Lua project, create this file to enable the **Shift + Ctrl + B** shortcut:
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "DCS-Witchcraft: Send Lua",
+            "type": "shell",
+            "command": "node",
+            "args": [
+                "C:/Users/%USERNAME%/.vscode-dcs-tools/bridge.js",
+                "${file}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        }
+    ]
+}
+```
+
+---
+
+## 4. RECEIVER CONFIGURATION (DCS WORLD)
+
+### A. Desanitization (Scripting Engine)
+**File:** `C:\Program Files\Eagle Dynamics\DCS World\Scripts\MissionScripting.lua`
+1.  Comment out the `io`, `os`, and `lfs` lines by adding `--` at the start.
+2.  **Append this specific block to the end of the file:**
+```lua
+------------- Witchcraft Debugging System ----------------------
 witchcraft = {}
 witchcraft.host = "localhost"
 witchcraft.port = 3001
-dofile(lfs.writedir()..[[Scripts\witchcraft.lua]])
-````
+dofile(lfs.writedir().."Scripts\\Witchcraft.lua")
+```
 
-## Preparing the Mission
-To start trying to connect to the node.js server, your mission will have to call `witchcraft.start(_G)`.
+### B. Script Installation
+1.  Place the original `Witchcraft.lua` in `%USERPROFILE%\Saved Games\DCS\Scripts\`.
+2.  In `Export.lua` (same folder), add the following line:
+    `dofile(lfs.writedir()..[[Scripts\Witchcraft.lua]])`
 
-Create a new trigger set to fire ONCE, create a new condition TIME IS MORE (1 second) and add two actions:
+---
 
-1. a DO SCRIPT FILE action that loads [MIST](http://forums.eagle.ru/showthread.php?t=98616). Make sure you are using **MIST 3.3 or later!**
-2. a DO SCRIPT action with the text `witchcraft.start(_G)`
+## 5. MISSION INITIALIZATION (.MIZ)
 
-## Using the Debug Console and the Map
-* Start the node.js server. If you are using windows, simply double-click `witchcraft.cmd` in the `windows` subfolder of this repository.
-* Start your DCS: World mission and enter a slot (singleplayer) or unpause the server (multiplayer).
-* Point a web browser at http://localhost:3000 (if you used witchcraft.cmd, it automatically did that for you in the first step).
+To allow the mission environment to accept incoming commands, you must open the socket via a trigger within the Mission Editor.
 
-The Lua debug console is mostly self-explanatory. Just play around with it and avoid infinite loops (those will understandably cause DCS to hang).
+1.  **Trigger:** `ONCE` (ONE TIME).
+2.  **Condition:** `TIME MORE (1)`.
+3.  **Action:** `DO LUA PREDICATE` (or `EXECUTE SCRIPT`):
+```lua
+if witchcraft then
+    witchcraft.start(_G)
+end
+```
 
-If you want the map to display the live positions of ground units, you have to tell witchcraft that it should send regular unit updates (select the "enable unit updates" template in the Lua Console and press Ctrl+Enter to execute it).
-The map is in an early stage and is currently hard-coded to only show units of the blue coalition.
+---
 
+## 6. NETWORK FLOW & PORTS SUMMARY
 
-## License
-The project itself is licensed under the GPLv3 or later. For third-party components (node.js and npm modules, the map icons, anything under `src/bower_components` and `src/vendor_js`), the licensing information can be found in the respective subdirectories or in the source file itself.
+| Segment | Protocol | Port |
+| :--- | :--- | :--- |
+| **VS Code -> Node Server** | Socket.io (Websocket) | **3000** |
+| **Web Console -> Node Server** | HTTP / Websocket | **3000** |
+| **Node Server -> DCS Mission** | TCP (RAW JSON) | **3002** |
+
+---
+
+## 7. DAILY WORKFLOW
+
+1.  **Cleanup:** Run `kill_server.cmd` (Optional, only if ports are locked).
+2.  **Server:** Run `witchcraft.cmd`. Keep this window open.
+3.  **DCS:** Start your mission. The server console must display `[Witchcraft] Connection established`.
+4.  **Edit:** Modify your Lua file in VS Code and press **Shift + Ctrl + B**.
+5.  **Confirm:** The VS Code terminal will display `[SUCCESS] DCS acknowledged execution`.
+
+---
+> **Technical Note:** You must re-apply **Step 4.A** after every DCS World update, as the installer frequently overwrites the `MissionScripting.lua` file.

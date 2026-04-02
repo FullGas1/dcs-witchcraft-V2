@@ -1,4 +1,0 @@
-*.pyc
-*~
-src/node_modules/*
-windows/nodejs/*
