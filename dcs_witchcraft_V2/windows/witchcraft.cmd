@@ -1,29 +1,31 @@
 @echo off
 TITLE DCS Witchcraft V2 Server
 
-:: 1. Detect script directory (the \windows folder)
-:: %~dp0 includes the trailing backslash
+:: 1. Détection des dossiers (Chemins relatifs)
 set "SCRIPT_DIR=%~dp0"
+set "WORKING_DIR=%SCRIPT_DIR%..\src"
+set "NODE_BIN=%SCRIPT_DIR%..\bin\node.exe"
 
-:: 2. Move to the \src folder relative to the script location
-:: /d allows changing drive and directory simultaneously
-cd /d "%SCRIPT_DIR%..\src"
+:: 2. Basculement vers le dossier source
+cd /d "%WORKING_DIR%"
 
 echo --- WITCHCRAFT V2 CONFIGURATION (PORTABLE) ---
 echo Working Directory: %CD%
 echo ----------------------------------------------
 
-:: 3. Verification and Execution
-if exist server.js (
+:: 3. Vérification et exécution via le binaire local
+if exist "%NODE_BIN%" (
+    echo [OK] Moteur Node.js portable detecte.
     echo [OK] Starting Node.js Engine...
-    node server.js
+    
+    :: Appel direct du node.exe local pour éviter l'erreur "non reconnu"
+    "%NODE_BIN%" server.js
 ) else (
-    echo [ERROR] server.js not found in:
-    echo %CD%
+    echo [ERROR] node.exe est introuvable dans : %NODE_BIN%
     echo.
-    echo Please ensure the "src" folder exists alongside the "windows" folder.
+    echo Verifiez que vous avez bien place node.exe dans le dossier "bin".
     pause
+    exit /b
 )
 
-:: Keep window open if the server stops or crashes
 pause
