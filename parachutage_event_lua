@@ -3,6 +3,10 @@
 -- SCRIPT : UNIT & CARGO SPAWNER (STABLE VERSION 1.3)
 -- COMPATIBILITÉ : API DCS WORLD & WITCHCRAFT V2
 -- ================================================================= --
+if app == nil then app = {} end
+if app.eventActive == nil then
+    app.eventActive = false
+end
 
 local spawnZoneName = "z1"  --
 local defaultAltitude = 500 -- in meters
@@ -51,11 +55,12 @@ local function executeUnitSpawn()
     if not status then
         env.error("WITCHCRAFT SPAWN ERROR: " .. tostring(err))
     end
+    return 0
 end
 
 -- 3. Méthode de spawn pour StaticObject (Cargos)
 local function executeStaticSpawn()
-    trigger.action.outText('executeStaticSpawn()', 5)
+    --trigger.action.outText('executeStaticSpawn()', 5)
     local pos = getSafeZonePoint(spawnZoneName)
     if not pos then return end
 
@@ -80,50 +85,57 @@ local function executeStaticSpawn()
     if not status then
         env.error("WITCHCRAFT STATIC ERROR: " .. tostring(err))
     end
+    return 0
 end
 
+local function ot(msg, duration)
+    trigger.action.outText(msg, duration)
+end
 -- 4. Handler d'événements sécurisé (Anti-Crash)
-local ParachuteAnalysisHandler = {}
-function ParachuteAnalysisHandler:onEvent(event)
-    -- Protection contre les événements sans initiateur ou objets détruits
-    if not event or not event.id or not event.initiator then return end
+if app.ParachuteAnalysisHandler == nil then
+    app.ParachuteAnalysisHandler = {}
+    function app.ParachuteAnalysisHandler:onEvent(event)
+        -- Protection contre les événements sans initiateur ou objets détruits
+        if not event or not event.id or not event.initiator then return end
 
-    -- Vérification de l'existence de l'objet avant appel de méthode [cite: 2026-02-02]
-    if not Object.isExist(event.initiator) then return end
+        -- Vérification de l'existence de l'objet avant appel de méthode [cite: 2026-02-02]
+        if not Object.isExist(event.initiator) then return end
 
-    local initiatorName = "Unknown"
-    local status, res = pcall(function() return event.initiator:getName() end)
-    if status then initiatorName = res end
+        local initiatorName = "Unknown"
+        local status, res = pcall(function() return event.initiator:getName() end)
+        if status then initiatorName = res end
 
-    -- Filtrage des événements pour éviter la saturation du log
-    local trackedEvents = { [15] = "BIRTH", [8] = "DEAD", [30] = "CARGO_UNHOOKED" }
+        -- Filtrage des événements pour éviter la saturation du log
+        local trackedEvents = { [15] = "BIRTH", [8] = "DEAD", [30] = "CARGO_UNHOOKED" }
 
-    if trackedEvents[event.id] then
-        local output = string.format(
-            "EVENT: %s | INITIATOR: %s | TIME: %.2f",
-            trackedEvents[event.id],
-            initiatorName,
-            timer.getTime()
-        )
-        trigger.action.outText(output, 5)
-        env.info("PARA_LOG: " .. output)
+        if trackedEvents[event.id] then
+            local output = string.format(
+                "EVENT: %s | INITIATOR: %s | TIME: %.2f",
+                trackedEvents[event.id],
+                initiatorName,
+                timer.getTime()
+            )
+            --trigger.action.outText(output, 5)
+            ot(output, 5)
+            env.info("PARA_LOG: " .. output)
+        end
     end
 end
 
 -- 5. Initialisation
-if ParachuteAnalysisHandler and ParachuteAnalysisHandler.id then
-    world.removeEventHandler(ParachuteAnalysisHandler)
+if app.eventActive == false then
+    trigger.action.outText("world.addEventHandler(app.ParachuteAnalysisHandler)", 5)
+    world.addEventHandler(app.ParachuteAnalysisHandler)
+    app.eventActive = true
 end
-
-world.addEventHandler(ParachuteAnalysisHandler)
-env.info("WITCHCRAFT: Script de parachutage V1.3 chargé.")
-
 
 --executeUnitSpawn()   -- Exécution immédiate du test 1 (Unité)
 
-executeStaticSpawn() -- Exécution immédiate du test 1 (static)
-
 -- Exécution différée du test 2 (Cargo) à T+10s
-timer.scheduleFunction(function()
-    executeStaticSpawn()
-end, nil, timer.getTime() + 10)
+--timer.scheduleFunction(function()
+--    executeStaticSpawn()
+--end, nil, timer.getTime() + 1)
+
+timer.scheduleFunction(executeStaticSpawn, nil, timer.getTime() + 1)
+
+env.info("WITCHCRAFT: Script de parachutage V1.3 chargé.")
