@@ -1,0 +1,19 @@
+{
+    "Lua.runtime.version": "Lua 5.1",
+    "Lua.diagnostics.globals": [
+        "witchcraft",
+        "JSON",
+        "trigger",
+        "coalition",
+        "Unit",
+        "Group",
+        "coord",
+        "timer",
+        "env",
+        "land"
+    ],
+    "Lua.diagnostics.disable": [
+        "deprecated",
+        "undefined-global"
+    ]
+}
