@@ -1,6 +1,10 @@
-witchcraft.factory('socket', function ($rootScope) {
-    var socket = io.connect();
-    
+/**
+ * SERVICE SOCKET CONSOLIDÉ
+ * Emplacement : src/frontend/scripts/services/socket.js
+ */
+angular.module('witchcraft')
+.factory('socket', function ($rootScope) {
+    var socket = io();
     return {
         on: function (eventName, callback) {
             socket.on(eventName, function () {  
@@ -14,15 +18,9 @@ witchcraft.factory('socket', function ($rootScope) {
             socket.emit(eventName, data, function () {
                 var args = arguments;
                 $rootScope.$apply(function () {
-                    if (callback) {
-                        callback.apply(socket, args);
-                    }
+                    if (callback) callback.apply(socket, args);
                 });
-            })
-        },
-        broadcast: function(eventName, data) {
-            socket.broadcast(eventName, data);
+            });
         }
     };
 });
-

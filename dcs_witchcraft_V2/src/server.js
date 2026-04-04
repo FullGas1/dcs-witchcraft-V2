@@ -6,71 +6,55 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
-const baseDir = __dirname; 
+const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
-// Support mixte : JSON pour bridge.js et Texte brut pour l'extension VS Code
-app.use(express.json({ limit: '50mb' }));
-app.use(express.text({ type: '*/*', limit: '50mb' })); 
-
-// Configuration des routes statiques (Frontend AngularJS)
-app.use(express.static(path.join(baseDir, 'frontend')));
-app.use('/scripts', express.static(path.join(baseDir, 'frontend', 'scripts')));
-app.use('/styles', express.static(path.join(baseDir, 'frontend', 'styles')));
-app.use('/templates', express.static(path.join(baseDir, 'frontend', 'templates')));
-app.use('/common', express.static(path.join(baseDir, 'common')));
-app.use('/vendor_js', express.static(path.join(baseDir, 'vendor_js')));
-app.use('/bower_components', express.static(path.join(baseDir, 'bower_components')));
+app.use(express.static(path.join(__dirname, 'frontend')));
+app.use('/bower_components', express.static(path.join(__dirname, 'bower_components')));
+app.use('/scripts', express.static(path.join(__dirname, 'frontend/scripts')));
+app.use('/styles', express.static(path.join(__dirname, 'frontend/styles')));
 
 let dcsSocket = null;
 
-// --- ROUTE POST UNIFIÉE ---
-app.post('/', (req, res) => {
-    if (dcsSocket && dcsSocket.writable) {
-        let payload;
-        // Détection du format entrant : JSON (bridge) ou Texte (VS Code extension)
-        if (typeof req.body === 'object' && req.body.code) {
-            payload = JSON.stringify(req.body) + '\n';
-        } else {
-            payload = JSON.stringify({ isHex: false, code: req.body }) + '\n';
-        }
-        
-        dcsSocket.write(payload);
-        console.log('\x1b[34m[VSCODE/BRIDGE]\x1b[0m Injection transmise à DCS');
-        res.status(200).send(`[SUCCESS] Code injecté (${payload.length} chars).`);
-    } else {
-        console.log('\x1b[31m[ERROR]\x1b[0m VS Code a tenté d\'injecter mais DCS est déconnecté.');
-        res.status(503).send("DCS Déconnecté");
-    }
-});
+function fromHex(hex) {
+    let str = '';
+    try { for (let i = 0; i < hex.length; i += 2) { str += String.fromCharCode(parseInt(hex.substr(i, 2), 16)); }
+    } catch (e) { return hex; }
+    return str;
+}
 
-// --- HUB TCP (DCS) ---
 const dcsBridge = net.createServer((socket) => {
-    console.log('\x1b[32m[DCS]\x1b[0m Connecté au Hub (Port 3001)');
+    socket.setKeepAlive(true, 1000);
+    socket.setNoDelay(true);
+    console.log('\x1b[32m[DCS] LIAISON ACTIVE\x1b[0m');
     dcsSocket = socket;
+
     socket.on('data', (data) => {
+        const raw = data.toString();
         try {
-            const messages = data.toString().split('\n').filter(l => l.trim() !== "");
-            messages.forEach(msg => io.emit('luaresult', JSON.parse(msg)));
-        } catch (e) { }
+            const lines = raw.split('\n').filter(l => l.trim().length > 0);
+            lines.forEach(line => {
+                let msg = JSON.parse(line);
+                if (msg.isHex && msg.result) {
+                    let decoded = fromHex(msg.result);
+                    try { msg.result = JSON.parse(decoded); } catch(e) { msg.result = decoded; }
+                }
+                console.log('\x1b[33m[RETOUR DCS]\x1b[0m', msg.result);
+                io.emit('luaresult', { success: (msg.success !== false), result: msg.result });
+            });
+        } catch (e) { console.log('\x1b[31m[ERR]\x1b[0m Flux corrompu'); }
     });
-    socket.on('close', () => { 
-        console.log('\x1b[31m[DCS]\x1b[0m Déconnecté.');
-        dcsSocket = null; 
-    });
-});
-dcsBridge.listen(3001, '127.0.0.1');
-
-// --- SOCKET.IO (Console) ---
-io.on('connection', (client) => {
-    client.on('lua', (data) => {
-        if (dcsSocket && dcsSocket.writable) {
-            dcsSocket.write(JSON.stringify(data) + '\n');
-        }
-    });
+    socket.on('close', () => { dcsSocket = null; });
 });
 
-server.listen(3000, () => {
-    console.log('\x1b[32m[READY]\x1b[0m Console : http://127.0.0.1:3000');
-    console.log('\x1b[34m[HUB]\x1b[0m En attente de DCS sur Port 3001...');
+dcsBridge.listen(3001, '0.0.0.0');
+
+io.on('connection', (socket) => {
+    console.log(`\x1b[36m[WEB] Client connecté : ${socket.id}\x1b[0m`);
+    socket.on('lua', (data) => {
+        if (dcsSocket && dcsSocket.writable) { dcsSocket.write(JSON.stringify(data) + '\n'); }
+    });
+});
+
+server.listen(3000, '0.0.0.0', () => {
+    console.log('\x1b[32m=== HUB WITCHCRAFT MODERNISÉ ACTIF (3000) ===\x1b[0m');
 });
