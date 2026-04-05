@@ -54,7 +54,7 @@ timeout /t 2
 
 ---
 
-## 3. TRANSMITTER CONFIGURATION (VS CODE)
+## 3. TRANSMITTER CONFIGURATION (VS CODE gateway)
 
 ### A. Tools Directory
 **Path:** `C:\Users\%USERNAME%\.vscode-dcs-tools\`
@@ -121,16 +121,22 @@ To allow the mission environment to accept incoming commands, you must open the 
 
 1.  **Trigger:** `ONCE` (ONE TIME).
 2.  **Condition:** `TIME MORE (1)`.
-3.  **Action:** `DO LUA PREDICATE` (or `EXECUTE SCRIPT`):
+3.  **Action:** `EXECUTE SCRIPT`:
 ```lua
-if witchcraft then
-    witchcraft.start(_G)
-end
+dofile("%USERPROFILE%\\Saved Games\\DCS\\Scripts\\Witchcraft.lua")
 ```
 
 ---
 
-## 6. NETWORK FLOW & PORTS SUMMARY
+## 6. Console editor
+
+To interact with the currently running mission by passing Lua scripts to it on the fly, open the Witchcraft console in a browser using the URL: http://localhost:3000/console.html
+This console allows you to open multiple snippets, making it easy to run several scripts in parallel.
+```
+
+---
+
+## 7. NETWORK FLOW & PORTS SUMMARY
 
 | Segment | Protocol | Port |
 | :--- | :--- | :--- |
@@ -140,7 +146,7 @@ end
 
 ---
 
-## 7. DAILY WORKFLOW
+## 8. DAILY WORKFLOW
 
 1.  **Cleanup:** Run `kill_server.cmd` (Optional, only if ports are locked).
 2.  **Server:** Run `witchcraft.cmd`. Keep this window open.
