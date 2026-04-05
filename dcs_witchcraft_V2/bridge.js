@@ -9,7 +9,7 @@ try {
     const hexCode = Buffer.from(code).toString('hex');
 
     const payload = JSON.stringify({
-        type: 'lua', // Changé de 'script' à 'lua' pour cohérence console
+        type: 'lua',
         isHex: true,
         code: hexCode
     });
@@ -26,10 +26,36 @@ try {
     };
 
     const req = http.request(options, (res) => {
+        let responseData = '';
+
+        res.on('data', (chunk) => { responseData += chunk; });
+
         res.on('end', () => {
-            if (res.statusCode === 200) console.log(` [SUCCESS] Injecté via HEX.`);
+            if (res.statusCode === 200) {
+                try {
+                    const parsed = JSON.parse(responseData);
+                    console.log('\x1b[32m[SUCCESS]\x1b[0m');
+                    // Affichage formaté du résultat DCS
+                    console.log(JSON.stringify(parsed.result, null, 2));
+                } catch (e) {
+                    console.log(` [SUCCESS] Injecté via HEX (Réponse brute: ${responseData})`);
+                }
+            } else {
+                console.log(`\x1b[31m[ERREUR]\x1b[0m Status: ${res.statusCode}`);
+                console.log(responseData);
+            }
+            process.exit(0);
         });
     });
+
+    req.on('error', (err) => {
+        console.error(`\x1b[31m[ERREUR SERVEUR]\x1b[0m ${err.message}`);
+        process.exit(1);
+    });
+
     req.write(payload);
     req.end();
-} catch (err) { process.exit(1); }
+} catch (err) { 
+    console.error(`\x1b[31m[ERR]\x1b[0m ${err.message}`);
+    process.exit(1); 
+}
