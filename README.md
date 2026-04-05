@@ -92,8 +92,13 @@ In your Lua project, create this file to enable the **Shift + Ctrl + B** shortcu
 ```
 
 ---
+## 4. Console editor
 
-## 4. RECEIVER CONFIGURATION (DCS WORLD)
+To interact with the currently running mission by passing Lua scripts to it on the fly, open the Witchcraft console in a browser using the URL: http://localhost:3000/console.html
+This console allows you to open multiple snippets, making it easy to run several scripts in parallel.
+
+---
+## 5. RECEIVER CONFIGURATION (DCS WORLD)
 
 ### A. Desanitization (Scripting Engine)
 **File:** `C:\Program Files\Eagle Dynamics\DCS World\Scripts\MissionScripting.lua`
@@ -115,7 +120,7 @@ or `dofile(lfs.writedir()..[[Scripts\WitchcraftExport.lua]])` in Export.lua
 
 ---
 
-## 5. MISSION INITIALIZATION (.MIZ)
+## 6. MISSION INITIALIZATION (.MIZ)
 
 To allow the mission environment to accept incoming commands, you must open the socket via a trigger within the Mission Editor.
 
@@ -124,14 +129,6 @@ To allow the mission environment to accept incoming commands, you must open the 
 3.  **Action:** `EXECUTE SCRIPT`:
 ```lua
 dofile("%USERPROFILE%\\Saved Games\\DCS\\Scripts\\Witchcraft.lua")
-```
-
----
-
-## 6. Console editor
-
-To interact with the currently running mission by passing Lua scripts to it on the fly, open the Witchcraft console in a browser using the URL: http://localhost:3000/console.html
-This console allows you to open multiple snippets, making it easy to run several scripts in parallel.
 ```
 
 ---
