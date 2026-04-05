@@ -97,6 +97,8 @@ In your Lua project, create this file to enable the **Shift + Ctrl + B** shortcu
 To interact with the currently running mission by passing Lua scripts to it on the fly, open the Witchcraft console in a browser using the URL: http://localhost:3000/console.html
 This console allows you to open multiple snippets, making it easy to run several scripts in parallel.
 
+Each snippet has a return terminal to display the data returned by DCS. Thus, visualizing a DCS object is possible via a simple return statement (e.g., `return Unit.getByName("groundUnit-1")` returns the table for the object named `groundUnit-1`).
+
 ---
 ## 5. RECEIVER CONFIGURATION (DCS WORLD)
 
